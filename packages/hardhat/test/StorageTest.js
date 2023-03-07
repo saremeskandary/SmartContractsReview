@@ -1,49 +1,77 @@
 const { expect } = require('chai');
+const { ethers } = require('hardhat');
 
-describe("Storage contract", function() {
-  let storage;
-  let controller;
+describe('Storage', function () {
+  let StructDefiner;
+  let Storage;
+  let Controller;
+  let DStructDefiner;
+  let DStorage;
+  let DController;
 
-  before(async function() {
-    // Deploy contracts
-    const Storage = await ethers.getContractFactory("Storage");
-    storage = await Storage.deploy();
-    await storage.deployed();
-
-    const Controller = await ethers.getContractFactory("Controller");
-    controller = await Controller.deploy(storage.address);
-    await controller.deployed();
+  // quick fix to let gas reporter fetch data from gas station & coinmarketcap
+  before((done) => {
+    setTimeout(done, 2000);
   });
+ 
+  describe("deployment", async function () {
+    it("Should deploy StructDefiner", async function () {
+      StructDefiner = await ethers.getContractFactory("StructDefiner");
+      DStructDefiner = await StructDefiner.deploy();
+    });
+    it("Should deploy Storage", async function () {
+      Storage = await ethers.getContractFactory("Storage");
+      DStorage = await Storage.deploy();
+    });
+    it("Should deploy Controller", async function () {
+      Controller = await ethers.getContractFactory("Controller");
+      console.log(`storage address: ${DStorage.address}`);
+      DController = await Controller.deploy(DStorage.address);
+    });
+
+    console.log(`DStorage is: ${DStorage}`);
+    it('should create a struct', async function () {
+      const someField = 123;
+      const someAddress = '0x000000000000000000000000000000000000abcd';
+      const someOtherField = 456;
+      const oneMoreField = 789;
 
 
-  
+      await DStorage.createStruct(
+        someField,
+        someAddress,
+        someOtherField,
+        oneMoreField
+      );
 
-  it("should get a struct by index", async function() {
-    // Create a new struct and store it in the contract
-    const newStruct = {
-      someField: 123,
-      someAddress: ethers.constants.AddressZero,
-      someOtherField: 456,
-      oneMoreField: 789,
-    };
-    await storage.myStructs.push(newStruct);
+      const myStruct = await DController.getStruct(0);
+      console.log(`myStruct ${myStruct}`);
+      expect(myStruct.someField).to.equal(someField);
+      expect(myStruct.someAddress).to.equal(someAddress);
+      expect(myStruct.someOtherField).to.equal(someOtherField);
+      expect(myStruct.oneMoreField).to.equal(oneMoreField);
+    });
 
-    // Get the struct using the getStructByIdx function
-    const structFromContract = await storage.getStructByIdx(0);
+    // it('should retrieve a struct', async function () {
+    //   const someField = 123;
+    //   const someAddress = '0x000000000000000000000000000000000000abcd';
+    //   const someOtherField = 456;
+    //   const oneMoreField = 789;
 
-    // Check that the returned struct is equal to the one we stored
-    expect(structFromContract.someField).to.equal(newStruct.someField);
-    expect(structFromContract.someAddress).to.equal(newStruct.someAddress);
-    expect(structFromContract.someOtherField).to.equal(newStruct.someOtherField);
-    expect(structFromContract.oneMoreField).to.equal(newStruct.oneMoreField);
+    //   await DController.createStruct(
+    //     someField,
+    //     someAddress,
+    //     someOtherField,
+    //     oneMoreField
+    //   );
 
-    // Get the struct using the getStruct function in the controller contract
-    const structFromController = await controller.getStruct(0);
-
-    // Check that the returned struct is equal to the one we stored
-    expect(structFromController.someField).to.equal(newStruct.someField);
-    expect(structFromController.someAddress).to.equal(newStruct.someAddress);
-    expect(structFromController.someOtherField).to.equal(newStruct.someOtherField);
-    expect(structFromController.oneMoreField).to.equal(newStruct.oneMoreField);
-  });
+    //   const myStructBytes = await DController.getStructBytes(0);
+    //   const myStruct = await DController.getStructFromBytes(myStructBytes);
+    //   expect(myStruct.someField).to.equal(someField);
+    //   expect(myStruct.someAddress).to.equal(someAddress);
+    //   expect(myStruct.someOtherField).to.equal(someOtherField);
+    //   expect(myStruct.oneMoreField).to.equal(oneMoreField);
+    // });
+  })
 });
+
